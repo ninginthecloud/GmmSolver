@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[3]:
 
 #! /usr/bin/env python
 '''
@@ -20,6 +20,7 @@ from gmm_poly import *
 get_ipython().magic(u'matplotlib inline')
 class Test(object):
     def __init__(self, param, n_samples, seed = 1):
+            self.seed = seed
             self.w1 = param[0]
             self.w2 = param[1]
             self.mu1 = param[2]
@@ -27,11 +28,12 @@ class Test(object):
             self.sigma1 = param[4]
             self.sigma2 = param[5]
             self.n_samples = n_samples
-            self.sample2d, self.sample1d  = self.sample()
+            self.sample2d, self.sample1d  = self.sample(seed = self.seed)
             
     def sample(self, seed = 0):
+        np.random.seed(seed)
         gmix = mixture.GaussianMixture(n_components=2, covariance_type='full')
-        gmix.fit(np.random.rand(2,1))  # Now it thinks it is trained
+        gmix.fit(np.random.rand(3,1))  # Now it thinks it is trained
         gmix.weights_ = np.array([self.w1, self.w2]) # mixture weights (n_components,) 
         gmix.means_ = np.array([[self.mu1], [self.mu2]])         # mixture means (n_components, 2) 
         gmix.covariances_ = np.array([[[self.sigma1**2]], [[self.sigma2**2]]]) # mixture cov (n_components, 2, 2)
@@ -58,7 +60,7 @@ class Test(object):
         param2 = self.parseTwoGmm(res)
         if isplot:
             self.plot(param1.flatten(), param2.flatten())
-        return (param1, param2)
+        return ([t1, param1], [t2, param2])
     
     def parseGMM(self, model):
         return np.round([model.weights_.flatten(), model.means_.flatten(), np.sqrt(model.covariances_.flatten())],4)
@@ -76,4 +78,16 @@ class Test(object):
         plot1 = plt.plot(bins, y1, 'r--', linewidth=1, color = 'red')
         y2 = self.generateMixture(bins, param2)
         plot2 = plt.plot(bins, y2, 'r--', linewidth=1, color = 'blue')
+
+
+# In[14]:
+
+if __name__ == "__main__":
+    unitest = Test(param = [0.2, 0.8, -4, 4, 1/4,2],n_samples=5000, seed = 10)
+    unitest.unitest(0.5, isplot = False)
+
+
+# In[ ]:
+
+
 

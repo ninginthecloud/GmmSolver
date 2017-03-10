@@ -12,23 +12,23 @@
 from __future__ import division
 import numpy as np
 import scipy as sp
+import numpy.polynomial.polynomial as poly
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 from sklearn import mixture
 import time
-from gmm_test import *
 get_ipython().magic(u'matplotlib inline')
 
 
-# In[7]:
+# In[18]:
 
 class TwoGaussian(object):
     def __init__(self, SAF):
         self.n = len(SAF)
         self.mu = np.mean(SAF)
         self.sigma2 = np.var(SAF)
+        #sample = (SAF - self.mu)/np.std(SAF)
         sample = SAF - self.mu
-        #sample = SAF
         self.M1 = np.mean(sample)
         self.M2 = np.mean(sample**2)
         self.M3 = np.mean(sample**3)
@@ -41,48 +41,65 @@ class TwoGaussian(object):
         self.x6 = self.M6 - 15 * self.M4 * self.M2 + 30 * self.M2**3
 
         
-    def recoverAlphaFromMoment(self, eps, xparam):
+    def recoverAlphaFromMoment(self, eps, xparam, opthred = None):
         X3, X4, X5, X6 = xparam
         coeff1 = [2, 0, X4, -X3**2]
         ymax = np.max(np.roots(coeff1))
         kai = 1. + np.sqrt(np.abs(X4))/ymax
+        #print "kai = {}".format(kai)
         #remove 18th degree polynomial for reference in later session
         
         #only keep cofficients of the first derivative of r(y)
-        coeff2= self.rprime(X3, X4, X5, X6)
-        R = np.roots(coeff2)
+        #numpy roots
+        #coeff2= self.rprime(X3, X4, X5, X6)
+        #R = np.roots(coeff2)
+        #numpy poly roots
+        coeff2= (self.rprime(X3, X4, X5, X6))[::-1]
+        R = np.polynomial.polynomial.polyroots(coeff2)
+        #print "R = {}".format(R)
         real_valued = R.real[abs(R.imag)<1e-5] # where I chose 1-e5 as a threshold
         #print real_valued
         #candidates = np.append(R, (1+eps/kai)*ymax)
         thred1 = (1+eps/kai)*ymax
         thred2 = (eps**2)*(kai**10)
-        print "thred1 = {}".format(thred1)
-        candidates = np.append(real_valued, thred1)
-        small_candidates = candidates[(candidates <= thred1)*(candidates > 0)]
-        res = [x for x in small_candidates if self.ry(x) <= thred2*x**18]
-        print "res = {}".format(res)
+        #print "thred1 = {}".format(thred1)
+        #candidates = np.append(real_valued, thred1)
+        candidates = real_valued
+        if not opthred:
+            small_candidates = candidates[(candidates <= thred1)*(candidates > 0)]
+        else:
+            small_candidates = candidates[(candidates <= opthred)*(candidates > 0)]
+        res = [x for x in small_candidates if self.ry(x)/thred2*x**18 <= 1]
+        #print "res = {}".format(res)
         #assert len(res) > 0, 'no valid solution for alpha'
         if len(res) > 0:
-            print "greater than zero. "
+            #print "greater than zero. "
             return np.max(res)
         else:
-            print "max value = {}".format(np.max(small_candidates))
+            #print "max value = {}".format(np.max(small_candidates))
             return np.max(small_candidates)
     
     def recoverFromMoments(self, eps):
         X3, X4, X5, X6 = [self.x3, self.x4, self.x5, self.x6]
-        #mu = self.M1
-        alpha = self.recoverAlphaFromMoment(eps, [self.x3, self.x4, self.x5, self.x6])
-        gamma = self.gammafunc(alpha)
-        beta = self.betafunc(alpha, gamma)
-        print "alpha = {}, gamma = {}, beta = {}".format(alpha, gamma, beta)
-        mu1, mu2 = self.mufunc(alpha, beta)
-        w1, w2 = self.weightfunc(mu1, mu2)
-        sigma2_1 = self.sigma2 - (w1*mu1**2 + w2*mu2**2 - mu1*gamma)
-        sigma2_2 = sigma2_1 + (mu2 - mu1)*gamma
-        #return [[w1,w2], [ mu1-self.mu, mu2-self.mu], [np.sqrt(sigma2_2), np.sqrt(sigma2_1)]]
-        return [[w1,w2], [ mu1-self.mu,mu2-self.mu], [np.sqrt(sigma2_1), np.sqrt(sigma2_2)]]
-        return [[w1,w2], [ mu1,mu2], [np.sqrt(sigma2_1), np.sqrt(sigma2_2)]]
+        sigma2_1, sigma2_2 = [-1, -1]
+        dummythred = None
+        count = 0
+        while (sigma2_1 < 0 or sigma2_2 < 0) and count < 5:
+            alpha = self.recoverAlphaFromMoment(eps, [self.x3, self.x4, self.x5, self.x6], dummythred)
+            dummythred = alpha
+            gamma = self.gammafunc(alpha)
+            beta = self.betafunc(alpha, gamma)
+            #print "alpha = {}, gamma = {}, beta = {}".format(alpha, gamma, beta)
+            mu1, mu2 = self.mufunc(alpha, beta)
+            #print "temporal mu1 = {}, mu2 = {}".format(mu1, mu2)
+            w1, w2 = self.weightfunc(mu1, mu2)
+            sigma2_1, sigma2_2 = self.sigmafunc(mu1, mu2, w1, w2, gamma)
+            count+=1
+            
+        #print "sigma2_1 = {}".format(sigma2_1)
+        #print "sigma2_2 = {}".format(sigma2_2)
+        return [[w1,w2], [ mu1+self.mu,mu2+self.mu], [np.sqrt(sigma2_1), np.sqrt(sigma2_2)]]
+        #return [[w1,w2],[ mu1+self.mu,mu2+self.mu], [np.sqrt(sigma2_1*self.sigma2), np.sqrt(sigma2_2*self.sigma2)]]
         
         #res = [[w1,w2], [ mu1+mu,mu2+mu], [np.sqrt(sigma2_1), np.sqrt(sigma2_2)]]
         #return res
@@ -94,7 +111,7 @@ class TwoGaussian(object):
         delta_sigma = np.sqrt(np.abs(self.x4))
         if f**2 <= delta_mu**2/sigma2:
             eps = np.sqrt(-((sigma2**6)/(delta_mu**12)*np.log(delta))/self.n)
-            print 'eps = {}'.format(eps)
+            #print 'eps = {}'.format(eps)
             return self.recoverFromMoments(eps)
         elif f**2 <= delta_sigma/sigma2:
             print 'TODO'
@@ -130,7 +147,7 @@ class TwoGaussian(object):
         assert m2 != m1
         #m1 = m1 + self.mu
         #m2 = m2 + self.mu
-        print [m1, m2]
+        #print [m1, m2]
         res = [m2/(m2 - m1), -m1/(m2-m1)]
         #print res
         return res
@@ -138,22 +155,19 @@ class TwoGaussian(object):
         if y > 0:
             return np.min([(np.abs(x))**(1/3) + (np.abs(y))**(1/4), x/np.sqrt(y)])
         return (np.abs(x))**(1/3) + (np.abs(y))**(1/4)
-    
+    def sigmafunc(self, mu1, mu2, p1, p2, g):
+        sigma2 = self.M2 - self.M1**2
+        sig1 = sigma2 - (p1*p2*(mu2-mu1)**2 - mu1*g)
+        sig2 = sigma2 - (p1*p2*(mu2-mu1)**2 - mu2*g)
+        if sig1 > 0:
+            return [sig1, sig1 + (mu2 - mu1)*g]
+        else:
+            return [(self.sigma2 - p2*sig2 - p1*p2*(mu2-mu1)**2)/p1, sig2]
 
 
-# In[8]:
+# In[21]:
 
-if __name__ == "__main__":
-    unitest = Test(param = [0.5, 0.5, -2, 1, 1, 1],n_samples=1000)
-    print unitest.unitest(.3)
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
+#if __name__ == "__main__":
+    #unitest = Test(param = [0.2, 0.8, -4, 4, 1/4,2],n_samples=5000)
+    #unitest.unitest(0.5, isplot = False)
 
