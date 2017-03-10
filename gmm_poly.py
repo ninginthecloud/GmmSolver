@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[22]:
 
 #! /usr/bin/env python
 '''
@@ -20,7 +20,7 @@ import time
 get_ipython().magic(u'matplotlib inline')
 
 
-# In[18]:
+# In[23]:
 
 class TwoGaussian(object):
     def __init__(self, SAF):
@@ -83,6 +83,7 @@ class TwoGaussian(object):
         X3, X4, X5, X6 = [self.x3, self.x4, self.x5, self.x6]
         sigma2_1, sigma2_2 = [-1, -1]
         dummythred = None
+        '''
         count = 0
         while (sigma2_1 < 0 or sigma2_2 < 0) and count < 5:
             alpha = self.recoverAlphaFromMoment(eps, [self.x3, self.x4, self.x5, self.x6], dummythred)
@@ -95,7 +96,17 @@ class TwoGaussian(object):
             w1, w2 = self.weightfunc(mu1, mu2)
             sigma2_1, sigma2_2 = self.sigmafunc(mu1, mu2, w1, w2, gamma)
             count+=1
-            
+        '''
+        alpha = self.recoverAlphaFromMoment(eps, [self.x3, self.x4, self.x5, self.x6], dummythred)
+        dummythred = alpha
+        gamma = self.gammafunc(alpha)
+        beta = self.betafunc(alpha, gamma)
+        #print "alpha = {}, gamma = {}, beta = {}".format(alpha, gamma, beta)
+        mu1, mu2 = self.mufunc(alpha, beta)
+        #print "temporal mu1 = {}, mu2 = {}".format(mu1, mu2)
+        w1, w2 = self.weightfunc(mu1, mu2)
+        sigma2_1, sigma2_2 = self.sigmafunc(mu1, mu2, w1, w2, gamma)
+         
         #print "sigma2_1 = {}".format(sigma2_1)
         #print "sigma2_2 = {}".format(sigma2_2)
         return [[w1,w2], [ mu1+self.mu,mu2+self.mu], [np.sqrt(sigma2_1), np.sqrt(sigma2_2)]]
@@ -165,9 +176,12 @@ class TwoGaussian(object):
             return [(self.sigma2 - p2*sig2 - p1*p2*(mu2-mu1)**2)/p1, sig2]
 
 
-# In[21]:
+# In[ ]:
 
-#if __name__ == "__main__":
-    #unitest = Test(param = [0.2, 0.8, -4, 4, 1/4,2],n_samples=5000)
-    #unitest.unitest(0.5, isplot = False)
+
+
+
+# In[ ]:
+
+
 

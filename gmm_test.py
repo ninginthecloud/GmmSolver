@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[3]:
+# In[19]:
 
 #! /usr/bin/env python
 '''
@@ -54,8 +54,8 @@ class Test(object):
         res = test.recover1DMixture(eps)
         end = time.time()
         t2 = (end - start)
-        print "Skelearn GMM cost time is: {} sec. \n".format(t1)
-        print "Moment method GMM cost time is: {} sec. \n".format(t2)
+        #print "Skelearn GMM cost time is: {} sec. \n".format(t1)
+        #print "Moment method GMM cost time is: {} sec. \n".format(t2)
         param1 = self.parseGMM(clf)
         param2 = self.parseTwoGmm(res)
         if isplot:
@@ -80,7 +80,7 @@ class Test(object):
         plot2 = plt.plot(bins, y2, 'r--', linewidth=1, color = 'blue')
 
 
-# In[14]:
+# In[20]:
 
 if __name__ == "__main__":
     unitest = Test(param = [0.2, 0.8, -4, 4, 1/4,2],n_samples=5000, seed = 10)
