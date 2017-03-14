@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[19]:
+# In[35]:
 
 #! /usr/bin/env python
 '''
@@ -21,6 +21,7 @@ get_ipython().magic(u'matplotlib inline')
 class Test(object):
     def __init__(self, param, n_samples, seed = 1):
             self.seed = seed
+            self.param = param
             self.w1 = param[0]
             self.w2 = param[1]
             self.mu1 = param[2]
@@ -30,6 +31,20 @@ class Test(object):
             self.n_samples = n_samples
             self.sample2d, self.sample1d  = self.sample(seed = self.seed)
             
+    def param_dist(self, est, real):
+        if type(est).__module__ != 'numpy':
+            est = np.array(est)
+        if type(real).__module__ != 'numpy':
+            real = np.array(real)  
+        return np.sum(np.abs(self.param_reorder(est) - self.param_reorder(real)))
+    
+    def param_reorder(self, param):
+        if param[2] > param[3]:
+            res = [param[1], param[0], param[3], param[2], param[5], param[4]]
+        else:
+            res = param
+        return res
+    
     def sample(self, seed = 0):
         np.random.seed(seed)
         gmix = mixture.GaussianMixture(n_components=2, covariance_type='full')
@@ -58,16 +73,20 @@ class Test(object):
         #print "Moment method GMM cost time is: {} sec. \n".format(t2)
         param1 = self.parseGMM(clf)
         param2 = self.parseTwoGmm(res)
+        dist1 = self.param_dist(param1, self.param)
+        dist2 = self.param_dist(param2, self.param)
         if isplot:
             self.plot(param1.flatten(), param2.flatten())
-        return ([t1, param1], [t2, param2])
+        return ([t1, dist1, param1], [t2, dist2, param2])
     
     def parseGMM(self, model):
-        return np.round([model.weights_.flatten(), model.means_.flatten(), np.sqrt(model.covariances_.flatten())],4)
+        res = np.round([model.weights_.flatten(),model.means_.flatten(),np.sqrt(model.covariances_.flatten())],4)
+        return res[0].tolist()+res[1].tolist()+res[2].tolist()
     
     def parseTwoGmm(self, model):
-        model = np.array(model)
-        return np.round(model.real,4)
+        model = np.round(np.array(model), 4)
+        return model[0].tolist()+model[1].tolist()+model[2].tolist()
+    
     def generateMixture(self, bins, param):
         assert len(param) == 6
         return param[0]*norm.pdf(bins, loc=param[2], scale=param[4])        +param[1]*norm.pdf(bins, loc=param[3], scale=param[5])
@@ -80,11 +99,16 @@ class Test(object):
         plot2 = plt.plot(bins, y2, 'r--', linewidth=1, color = 'blue')
 
 
-# In[20]:
+# In[50]:
 
 if __name__ == "__main__":
-    unitest = Test(param = [0.2, 0.8, -4, 4, 1/4,2],n_samples=5000, seed = 10)
-    unitest.unitest(0.5, isplot = False)
+    unitest = Test(param = [0.5, 0.5, -2, 2, 1,1],n_samples=1000, seed = 50000)
+    print unitest.unitest(0.5, isplot = False)
+
+
+# In[ ]:
+
+
 
 
 # In[ ]:
