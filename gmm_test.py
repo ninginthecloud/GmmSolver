@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[35]:
+# In[13]:
 
 #! /usr/bin/env python
 '''
@@ -76,7 +76,7 @@ class Test(object):
         dist1 = self.param_dist(param1, self.param)
         dist2 = self.param_dist(param2, self.param)
         if isplot:
-            self.plot(param1.flatten(), param2.flatten())
+            self.plot(param1, param2)
         return ([t1, dist1, param1], [t2, dist2, param2])
     
     def parseGMM(self, model):
@@ -99,11 +99,11 @@ class Test(object):
         plot2 = plt.plot(bins, y2, 'r--', linewidth=1, color = 'blue')
 
 
-# In[50]:
+# In[15]:
 
 if __name__ == "__main__":
-    unitest = Test(param = [0.5, 0.5, -2, 2, 1,1],n_samples=1000, seed = 50000)
-    print unitest.unitest(0.5, isplot = False)
+    unitest = Test(param = [0.5, 0.5, 2, 2, 1,2],n_samples=1000, seed = 50000)
+    print unitest.unitest(0.5, isplot =False)
 
 
 # In[ ]:

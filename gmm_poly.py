@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[22]:
+# In[7]:
 
 #! /usr/bin/env python
 '''
@@ -20,7 +20,7 @@ import time
 get_ipython().magic(u'matplotlib inline')
 
 
-# In[23]:
+# In[8]:
 
 class TwoGaussian(object):
     def __init__(self, SAF):
@@ -114,6 +114,14 @@ class TwoGaussian(object):
         
         #res = [[w1,w2], [ mu1+mu,mu2+mu], [np.sqrt(sigma2_1), np.sqrt(sigma2_2)]]
         #return res
+    def recoverSameMean(self, xparam):
+        X4, X6 = xparam
+        delta_sigma2 = np.sqrt((4/3)*X4 + (X6**2)/(25*X4**2))
+        w1, w2 = (0.5*(1 - X6/(5*X4*delta_sigma2)), 0.5*(1 + X6/(5*X4*delta_sigma2)))
+        sigma2_1 = self.sigma2 - w2*delta_sigma2
+        sigma2_2 = self.sigma2 + w1*delta_sigma2
+        return [[w1,w2], [ self.mu,self.mu], [np.sqrt(sigma2_1), np.sqrt(sigma2_2)]]
+    
     def recover1DMixture(self, delta):
         sigma2 = self.M2 - self.M1**2
         assert sigma2 == self.M2
@@ -125,8 +133,7 @@ class TwoGaussian(object):
             #print 'eps = {}'.format(eps)
             return self.recoverFromMoments(eps)
         elif f**2 <= delta_sigma/sigma2:
-            print 'TODO'
-            return [[.5,.5], [ self.mu, self.mu], [np.sqrt(sigma2), np.sqrt(sigma2)]]
+            return self.recoverSameMean([self.x4, self.x6])
         else:
             return [[.5,.5], [ self.mu, self.mu], [np.sqrt(sigma2), np.sqrt(sigma2)]]
         
@@ -174,6 +181,11 @@ class TwoGaussian(object):
             return [sig1, sig1 + (mu2 - mu1)*g]
         else:
             return [(self.sigma2 - p2*sig2 - p1*p2*(mu2-mu1)**2)/p1, sig2]
+
+
+# In[ ]:
+
+
 
 
 # In[ ]:
